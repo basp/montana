@@ -3,7 +3,6 @@
 using Entities;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 public class MontanaDbContext(DbContextOptions<MontanaDbContext> options)
     : DbContext(options)
@@ -60,27 +59,25 @@ public class MontanaDbContext(DbContextOptions<MontanaDbContext> options)
 
         modelBuilder.Entity<TimeEntry>(entry =>
         {
-            entry
-                .Property(e => e.Description)
-                .HasMaxLength(2048);
-            entry
-                .HasIndex(e => e.StartedAt);
-            entry
-                .HasIndex(e => e.ProjectId);
-            entry
-                .ToTable(table => table.HasCheckConstraint(
-                    "CK_TimeEntries_EndedAt_Not_Before_StartedAt",
-                    "\"EndedAt\" IS NULL OR \"EndedAt\" >= \"StartedAt\""));
+            // Time entry invariant name.
+            const string teCk = 
+                "CK_TimeEntries_EndedAt_Not_Before_StartedAt";
+            
+            // Invariant: ensure ended after started.
+            const string teCkSql = 
+                "\"EndedAt\" IS NULL OR \"EndedAt\" >= \"StartedAt\"";            
 
+            entry.Property(e => e.Description).HasMaxLength(2048);
+            entry.HasIndex(e => e.StartedAt);
+            entry.HasIndex(e => e.ProjectId);
+            entry.ToTable(table => table.HasCheckConstraint(teCk, teCkSql));
             entry.HasOne(e => e.Project)
                 .WithMany(p => p.TimeEntries)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.SetNull);
-
             entry.HasMany(e => e.Tags)
                 .WithMany(t => t.TimeEntries)
-                .UsingEntity(join =>
-                    join.ToTable("TimeEntryTags"));
+                .UsingEntity(join => join.ToTable("TimeEntryTags"));
         });
     }
 

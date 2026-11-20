@@ -19,5 +19,3 @@ app.MapGet("/", () => "Hello World!");
 app.MapTimeEntryEndpoints();
 
 app.Run();
-
-public partial class Program;
