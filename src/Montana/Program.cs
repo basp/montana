@@ -3,8 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString =
+    builder
+        .Configuration
+        .GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<MontanaDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Montana")));
+    options.UseSqlite(connectionString));
 
 var app = builder.Build();
 
