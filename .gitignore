@@ -1,0 +1,13 @@
+bin/
+obj/
+
+.idea/
+.vscode/
+.vs/
+
+.agents/
+.github/
+.junie/
+.opencode/
+
+appsettings.Development.json
