@@ -69,8 +69,8 @@ public class MontanaDbContext(DbContextOptions<MontanaDbContext> options)
                 .HasIndex(e => e.ProjectId);
             entry
                 .ToTable(table => table.HasCheckConstraint(
-                "CK_TimeEntries_EndedAt_Not_Before_StartedAt",
-                "\"EndedAt\" IS NULL OR \"EndedAt\" >= \"StartedAt\""));
+                    "CK_TimeEntries_EndedAt_Not_Before_StartedAt",
+                    "\"EndedAt\" IS NULL OR \"EndedAt\" >= \"StartedAt\""));
 
             entry.HasOne(e => e.Project)
                 .WithMany(p => p.TimeEntries)
@@ -79,7 +79,7 @@ public class MontanaDbContext(DbContextOptions<MontanaDbContext> options)
 
             entry.HasMany(e => e.Tags)
                 .WithMany(t => t.TimeEntries)
-                .UsingEntity(join => 
+                .UsingEntity(join =>
                     join.ToTable("TimeEntryTags"));
         });
     }
@@ -96,66 +96,58 @@ public class MontanaDbContext(DbContextOptions<MontanaDbContext> options)
     {
         this.PrepareChanges();
         return base.SaveChangesAsync(
-            acceptAllChangesOnSuccess, 
+            acceptAllChangesOnSuccess,
             cancellationToken);
     }
 
     private void PrepareChanges()
     {
-        var reservedProjectSlugs = 
+        var reservedProjectSlugs =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        
-        var reservedTagSlugs = 
+
+        var reservedTagSlugs =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in this.ChangeTracker.Entries<TimeEntry>())
         {
-            // Skip everything that is not added or modified.
             if (entry.State is not (EntityState.Added or EntityState.Modified))
             {
                 continue;
             }
 
             var timeEntry = entry.Entity;
-
-            // Ensure creation timestamp.
             if (entry.State is EntityState.Added && timeEntry.CreatedAt == default)
             {
                 timeEntry.CreatedAt = DateTimeOffset.UtcNow;
             }
 
-            if (timeEntry.EndedAt is { } endedAt)
+            timeEntry.DurationSeconds = timeEntry.EndedAt switch
             {
-                if (endedAt < timeEntry.StartedAt)
-                {
+                { } endedAt when endedAt < timeEntry.StartedAt =>
                     throw new InvalidOperationException(
-                        $"TimeEntry {timeEntry.Id} ends ({endedAt:O}) before it starts ({timeEntry.StartedAt:O}).");
-                }
-
-                // Timer has ended, ensure duration is known.
-                var duration = endedAt - timeEntry.StartedAt;
-                timeEntry.DurationSeconds =  (long)duration.TotalSeconds;
-            }
-            else
-            {
-                // Timer is still running, ensure duration is unknown.
-                timeEntry.DurationSeconds = null;
-            }
+                        $"TimeEntry {timeEntry.Id} ends ({endedAt:O}) before it starts ({timeEntry.StartedAt:O})."),
+                { } endedAt =>
+                    (long)(endedAt - timeEntry.StartedAt).TotalSeconds,
+                _ => null,
+            };
         }
 
-        foreach (var entry in ChangeTracker.Entries<Project>())
+        foreach (var entry in this.ChangeTracker.Entries<Project>())
         {
-            if (entry.State is EntityState.Added
-                || (entry.State is EntityState.Modified && entry.Property(p => p.Name).IsModified))
+            if (entry.State is EntityState.Added ||
+                (entry.State is EntityState.Modified &&
+                 entry.Property(p => p.Name).IsModified))
             {
                 entry.Entity.Slug = NextFreeSlug(
                     Slug.From(entry.Entity.Name),
                     reservedProjectSlugs,
-                    slug => Set<Project>().Any(p => p.Slug == slug && p.Id != entry.Entity.Id));
+                    slug => 
+                        this.Set<Project>().Any(
+                            p => p.Slug == slug && p.Id != entry.Entity.Id));
             }
         }
 
-        foreach (var entry in ChangeTracker.Entries<Tag>())
+        foreach (var entry in this.ChangeTracker.Entries<Tag>())
         {
             if (entry.State is EntityState.Added
                 || (entry.State is EntityState.Modified && entry.Property(t => t.Name).IsModified))
