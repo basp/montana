@@ -29,33 +29,25 @@ entry MUST have no end time and no duration until it is stopped.
 #### Scenario: Start time is assigned by the server
 
 - **WHEN** a client starts a time entry
-- **THEN** the returned start time is a UTC timestamp close to the time the
-  request was received, and the end time and duration are null
+- **THEN** the returned start time is a UTC timestamp close to the time the request was received, and the end time and duration are null
 
 ### Requirement: Represent a running time entry
 
-A time-entry representation MUST contain `id`, `description`, `startedAt`,
-`endedAt`, and `durationSeconds`. It MUST identify the entry by `id` and MUST
-NOT include a `url` self-link field, project data, tag data, or navigation data
-in this slice.
+A time-entry representation MUST contain `id`, `description`, `startedAt`, `endedAt`, and `durationSeconds`. It MUST identify the entry by `id` and MUST NOT include a `url` self-link field, project data, tag data, or navigation data in this slice.
 
 #### Scenario: Created response contains the running representation
 
 - **WHEN** a time entry is created
-- **THEN** the response body contains the entry's identifier, description,
-  UTC start time, a null end time, and a null duration
+- **THEN** the response body contains the entry's identifier, description, UTC start time, a null end time, and a null duration
 
 #### Scenario: Representation identifies the entry by id
 
 - **WHEN** a time entry is returned by the create or read endpoint
-- **THEN** the body contains an `id` for the entry and does not contain a `url`
-  field
+- **THEN** the body contains an `id` for the entry and does not contain a `url` field. The `endedAt` and `durationSecond` fiels will be `null`.
 
 ### Requirement: Normalize descriptions
 
-The API MUST trim leading and trailing whitespace from a description before
-storing and returning it. A description that is empty or contains only
-whitespace MUST be treated as absent and represented as null.
+The API MUST trim leading and trailing whitespace from a description before storing and returning it. A description that is empty or contains only whitespace MUST be treated as absent and represented as null.
 
 #### Scenario: Trim surrounding whitespace
 
